@@ -1,5 +1,5 @@
 /*
- * Include that uses a SQLite to manipulate strings for different languages in the easiest way you've ever seen.
+ * SQLite based include that easily allows to manipulate multilanguage strings.
  * Copyright (C) 2013 Giampaolo Falqui
  *
  * This program is free software; you can redistribute it and/or modify

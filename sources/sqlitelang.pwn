@@ -34,7 +34,8 @@
  * Includes
 */
 
-#include <a_samp>
+#include 		<a_samp>
+#include 		<sqlitei>
 
 /*
  * Variables Declaration
@@ -45,8 +46,10 @@ enum SQLiteLang_playerInformation {
 };
 
 enum SQLiteLang_internalInformation {
-	bool: internalStatus, // The SQLiteLang include is by default turned off.
-	internalDirectory[512],
+	bool: systemStatus,
+	bool: debugStatus,
+	DB: databaseHandler,
+	databaseDirectory[512],		
 };
 
 new SQLiteLang_playerVariables[MAX_PLAYERS][SQLiteLang_playerInformation];
@@ -56,10 +59,43 @@ new SQLiteLang_internalVariables[SQLiteLang_internalInformation];
  * Hooks
 */
 
+// OnGameModeInit
+public OnGameModeInit(playerid)
+{
+    #if defined SQLiteLang_OnGameModeInit
+		SQLiteLang_OnGameModeInit(playerid);			
+    #endif
+    return 1;
+}
+
+public SQLiteLang_OnGameModeInit() 
+{
+	// By default, SQLiteLang is turned off.
+	SQLiteLang_internalVariables[systemStatus] = false;
+	
+	// By default, SQLiteLang debugging mode is turned off.
+	SQLiteLang_internalVariables[debugStatus] = false;	
+	
+	// By default, the directory is set as the following.
+	SQLiteLang_internalVariables[databaseDirectory] = "SQLiteLang/Database.db";
+	return 1;
+}
+
+#if defined _ALS_OnGameModeInit
+    #undef OnGameModeInit
+#else
+    #define _ALS_OnGameModeInit
+#endif
+#define OnGameModeInit SQLiteLang_OnGameModeInit
+#if defined SQLiteLang_OnGameModeInit
+    forward SQLiteLang_OnGameModeInit(playerid);
+#endif
+
+// OnPlayerConnect
 public OnPlayerConnect(playerid)
 {
     #if defined SQLiteLang_OnPlayerConnect	
-		if(SQLiteLang_internalVariables[internalStatus])
+		if(SQLiteLang_internalVariables[systemStatus])
 			SQLiteLang_OnPlayerConnect(playerid);			
     #endif
     return 1;
@@ -88,12 +124,56 @@ public SQLiteLang_OnPlayerConnect(playerid)
 /*
  * SQLiteLang_Initialize
  * This function declares the name of the database and saves it into a variable (both file and directory).
- * If the database does not exist, a new one will be created. 
+ * If the database does not exist, a new one will be created by default in the folder 'SQLiteLang'.
  *
- * file[] = Directory and file name of the database.
+ * optional: file[] ("SQLiteLang/Database.db") = Directory and file name of the database.
+ * optional: debug (false) = Turning this on will activate the debugging mode.
 */
-SQLiteLang_Initialize(file[])
+SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", debug = false)
 {
+	if(debug)
+		SQLiteLang_internalVariables[debugStatus] = true;
+		
+	if(strcmp(file, "SQLiteLang/Database.db", false)) 
+	{				
+		strcat(SQLiteLang_internalVariables[databaseDirectory], file, 512);	
+		
+		if(SQLiteLang_internalVariables[debugStatus])
+			printf("SQLiteLang_DEBUG: SQLiteLang initialization started. Custom directory selected: \"%s\".", SQLiteLang_internalVariables[databaseDirectory]);		
+	}
+		
+	if(!fexist("SQLiteLang/Database.db")) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus])
+			print("SQLiteLang_DEBUG: The database does not exist, automatic creation has been started.");
+		
+		SQLiteLang_internalVariables[databaseHandler] = db_open("SQLiteLang/Database.db");
+		
+		if(!fexist("SQLiteLang/Database.db"))
+		{	
+			if(SQLiteLang_internalVariables[debugStatus])
+				print("SQLiteLang_DEBUG: The system failed to create the database (the folder 'SQLiteLang' does not exist).");								
+		}
+		else
+		{
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "CREATE TABLE IF NOT EXISTS `strings` (`internal_identifier` INTEGER PRIMARY KEY NOT NULL UNIQUE)");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `strings` ADD `identifier` VARCHAR");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `strings` ADD `lang` VARCHAR");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `strings` ADD `text` VARCHAR");	
+			
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "CREATE TABLE IF NOT EXISTS `languages` (`internal_identifier` INTEGER PRIMARY KEY NOT NULL UNIQUE)");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `languages` ADD `lang_name` VARCHAR");
+			
+			print("SQLiteLang_DEBUG: SQLiteLang successfully started.");
+			SQLiteLang_internalVariables[systemStatus] = true;
+		}
+	}
+	else
+	{
+		print("SQLiteLang_DEBUG: SQLiteLang successfully started.");
+		SQLiteLang_internalVariables[systemStatus] = true;
+	}
+	
 	return 1;
 }
 

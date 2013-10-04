@@ -290,7 +290,11 @@ to attach them to the start of each source file to most effectively
 convey the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
+<<<<<<< HEAD
     SQLite based include that easily allows to manipulate multilanguage strings.
+=======
+    Include that uses a SQLite to manipulate strings for different languages in the easiest way you've ever seen.
+>>>>>>> Initial commit
     Copyright (C) 2013  Giampaolo Falqui
 
     This program is free software; you can redistribute it and/or modify

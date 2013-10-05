@@ -19,11 +19,11 @@
  * (DONE!) SQLiteLang_Initialize(file[])
  * (DONE!) SQLiteLang_Terminate()
  *
- * (DONE!) SQLiteLang_AddIdentifierString(identifier[])
+ * (DONE!) SQLiteLang_AddIdentifierString(identifier[], description[])
  * TODO: SQLiteLang_DeleteIdentifier(identifier[])
  *
  * TODO: SQLiteLang_AddLanguageString(identifier[], lang[], string[])
- * TODO: SQLiteLang_AddLanguage(lang[])
+ * TODO: SQLiteLang_AddLanguage(lang[], description[])
  *
  * TODO: SQLiteLang_DeleteLanguage(lang[])
  * TODO: SQLiteLang_DeleteLanguageString(identifier[], lang[])
@@ -40,7 +40,7 @@
  *
  * (DONE!) SQLiteLang_IsIdentifierValid(identifier[])
  * (DONE!) SQLiteLang_IsLanguageValid(lang[])
- * SQLiteLang_IsLanguageStringValid(identifier[], lang[])
+ * (DONE!) SQLiteLang_IsLanguageStringValid(identifier[], lang[])
 */
 
 /*
@@ -188,9 +188,11 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 		
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "CREATE TABLE IF NOT EXISTS `identifiers` (`internal_identifier` INTEGER PRIMARY KEY NOT NULL UNIQUE)");
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `identifiers` ADD `identifier_name` VARCHAR");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `identifiers` ADD `identifier_description` VARCHAR");
 		
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "CREATE TABLE IF NOT EXISTS `languages` (`internal_identifier` INTEGER PRIMARY KEY NOT NULL UNIQUE)");
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `languages` ADD `lang_name` VARCHAR");
+			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `languages` ADD `lang_description` VARCHAR");
 			
 			print("SQLiteLang (SQLiteLang_Initialize): Initialization completed successfully.");
 			SQLiteLang_internalVariables[systemStatus] = true;
@@ -221,6 +223,8 @@ SQLiteLang_Terminate()
 		
 	SQLiteLang_internalVariables[systemStatus] = false;
 	
+	strcat(SQLiteLang_internalVariables[databaseDirectory], "SQLiteLang/Database.db");
+	
 	print("SQLiteLang (SQLiteLang_Terminate): Termination completed successfully.");
 	return 1;
 }
@@ -230,8 +234,9 @@ SQLiteLang_Terminate()
  * This function adds a new string identifier to the database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
+ * description[] = The description of the identifier (ie. "string that welcomes new players in the server").
 */
-SQLiteLang_AddIdentifierString(identifier[])
+SQLiteLang_AddIdentifierString(identifier[], description[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
@@ -248,8 +253,9 @@ SQLiteLang_AddIdentifierString(identifier[])
 	
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
-	new DBStatement: insertIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `identifiers` (`identifier_name`) VALUES (?)");
+	new DBStatement: insertIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `identifiers` (`identifier_name`, `identifier_description`) VALUES (?, ?)");
 	stmt_bind_value(insertIdentifierStatement, 0, DB::TYPE_STRING, identifier);
+	stmt_bind_value(insertIdentifierStatement, 1, DB::TYPE_STRING, description);
 			
 	if(!stmt_execute(insertIdentifierStatement)) 
 	{
@@ -258,7 +264,7 @@ SQLiteLang_AddIdentifierString(identifier[])
 		return 0;
 	}
 			
-	printf("SQLiteLang (SQLiteLang_AddIdentifierString): New identifier added (identifier: '%s').", identifier);
+	printf("SQLiteLang (SQLiteLang_AddIdentifierString): New identifier added (identifier: '%s' - description: '%s').", identifier, description);
 			
 	stmt_close(insertIdentifierStatement);
 	return 1;
@@ -269,7 +275,7 @@ SQLiteLang_AddIdentifierString(identifier[])
  * This function adds a new language string to the database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
  * string[] = The string is the actual string of text to show in different languages.
 */
 SQLiteLang_AddLanguageString(identifier[], lang[], string[])
@@ -279,74 +285,44 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
 		print("SQLiteLang (SQLiteLang_AddLanguageString): Usage failed (system not started).");
 		return 0;
 	}
-	
-	// Opening a connection to the database.
-	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 
-	// Preparing the query 'if the identifier selected exists'.
-	new DBStatement: retrieveIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "SELECT `identifier_name` FROM `identifiers` WHERE `identifier_name` = ?");
-	stmt_bind_value(retrieveIdentifierStatement, 0, DB::TYPE_STRING, identifier);
-
-	// Executing the query 'if the identifier selected exists'.
-	if(stmt_execute(retrieveIdentifierStatement)) 
+	// Checking if the identifier exists.
+	if(SQLiteLang_IsIdentifierValid(identifier)) 
 	{
-		// If the identifier exists then we check if the language exists.
-		if(stmt_rows_left(retrieveIdentifierStatement)) 
+		// Checking if the language exists.
+		if(SQLiteLang_IsLanguageValid(lang))
 		{
-			stmt_close(retrieveIdentifierStatement);
+			// Opening a connection to the database.
+			SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);	
 			
-			// Preparing the query 'if the language exists'.
-			new DBStatement: retrieveLanguageStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "SELECT `lang_name` FROM `languages` WHERE `lang_name` = ?");
-			stmt_bind_value(retrieveLanguageStatement, 0, DB::TYPE_STRING, lang);
-			
-			// Executing the query 'if the language exists'.
-			if(stmt_execute(retrieveLanguageStatement)) 
+			new DBStatement: insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `string`) VALUES (?, ?, ?)");
+			stmt_bind_value(insertStringStatement, 0, DB::TYPE_STRING, identifier);
+			stmt_bind_value(insertStringStatement, 1, DB::TYPE_STRING, lang);
+			stmt_bind_value(insertStringStatement, 2, DB::TYPE_STRING, string);
+					
+			if(!stmt_execute(insertStringStatement)) 
 			{
-				// If the language exists then
-				if(stmt_rows_left(retrieveLanguageStatement)) 
-				{
-					stmt_close(retrieveLanguageStatement);
-					
-					new DBStatement: insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `string`) VALUES (?, ?, ?)");
-					stmt_bind_value(insertStringStatement, 0, DB::TYPE_STRING, identifier);
-					stmt_bind_value(insertStringStatement, 1, DB::TYPE_STRING, lang);
-					stmt_bind_value(insertStringStatement, 2, DB::TYPE_STRING, string);
-					
-					if(!stmt_execute(insertStringStatement)) 
-					{
-						print("SQLiteLang (SQLiteLang_AddLanguageString): Failed to executive SQLite query (database corrupted).");
-						return 0;
-					}
-					
-					printf("SQLiteLang (SQLiteLang_AddLanguageString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
-					
-					stmt_close(insertStringStatement);
-					return 1;
-				}
-				else
-				{
-					stmt_close(retrieveLanguageStatement);
-					
-					printf("SQLiteLang (SQLiteLang_AddLanguageString): The language \"%s\" does not exist in the database. You must create it before adding new strings.", lang);
-					db_close(SQLiteLang_internalVariables[databaseHandler]);
-					return 0;
-				}
-			}
-			else 
-			{
-				print("SQLiteLang (SQLiteLang_AddLanguageString): Failure to execute the SQLite query (database corrupted).");
-				db_close(SQLiteLang_internalVariables[databaseHandler]);
+				print("SQLiteLang (SQLiteLang_AddLanguageString): Failed to executive SQLite query (database corrupted).");
 				return 0;
 			}
+					
+			printf("SQLiteLang (SQLiteLang_AddLanguageString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
+					
+			stmt_close(insertStringStatement);
+			return 1;
 		}
 		else
 		{
-			stmt_close(retrieveIdentifierStatement);
-			
-			printf("SQLiteLang (SQLiteLang_AddLanguageString): The identifier \"%s\" does not exist in the database. You must create it before adding new strings.", identifier);
+			printf("SQLiteLang (SQLiteLang_AddLanguageString): The language \"%s\" does not exist in the database. You must create it before adding new strings.", lang);
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 0;
 		}
+	}
+	else 
+	}
+		printf("SQLiteLang (SQLiteLang_AddLanguageString): The identifier \"%s\" does not exist in the database. You must create it before adding new strings.", identifier);
+		db_close(SQLiteLang_internalVariables[databaseHandler]);
+		return 0;
 	}
 		
 	return 1;
@@ -356,7 +332,8 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
  * SQLiteLang_AddLanguage
  * This function adds a new language to the database.
  *
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
+ * description[] = The description of the language (ie. "English" or "Italian Language" or "{FFFFFF}Spanish").
 */
 SQLiteLang_AddLanguage(lang[])
 {
@@ -375,7 +352,7 @@ SQLiteLang_AddLanguage(lang[])
  * Be careful, deleting a language will delete all the language strings already added in the database.
  * Furthermore, you may not delete the default language, if set.
  *
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_DeleteLanguage(lang[])
 {
@@ -410,7 +387,7 @@ SQLiteLang_DeleteIdentifier(identifier[])
  * This function deletes a specific language string of a specific identifier from the database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_DeleteLanguageString(identifier[], lang[])
 {
@@ -428,7 +405,7 @@ SQLiteLang_DeleteLanguageString(identifier[], lang[])
  * This function modify a specific language string in database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
  * new_string[] = The string is the new actual string of text to show in different languages that will replace the old one.
 */
 SQLiteLang_ModifyLanguageString(identifier[], lang[], new_string[])
@@ -447,7 +424,7 @@ SQLiteLang_ModifyLanguageString(identifier[], lang[], new_string[])
  * This function shows a specific language string taken from the database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_ShowLanguageString(identifier[], lang[])
 {
@@ -483,7 +460,7 @@ SQLiteLang_ShowPlayerString(playerid, identifier[])
  * This function sets the default language for users that haven't selected an available language.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_SetDefaultLang(lang[])
 {
@@ -501,7 +478,7 @@ SQLiteLang_SetDefaultLang(lang[])
  * This function sets the language of a player.
  * 
  * playerid = playerid of the player.
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_SetPlayerLang(playerid, lang[])
 {
@@ -564,7 +541,7 @@ SQLiteLang_IsIdentifierValid(identifier[])
  * SQLiteLang_IsLanguageValid
  * This function checks if a language exists.
  * 
- * lang[] = The lang is used to identify the language of the string (ie. "en").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
 SQLiteLang_IsLanguageValid(lang[])
 {
@@ -600,6 +577,60 @@ SQLiteLang_IsLanguageValid(lang[])
 				
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 0;
+		}
+	}
+	
+	return 1;
+}
+
+/*
+ * SQLiteLang_IsLanguageStringValid
+ * This function checks if a language string already exists.
+ * 
+ * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
+ * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
+*/
+SQLiteLang_IsLanguageStringValid(identifier[], lang[])
+{
+	if(!SQLiteLang_internalVariables[systemStatus]) 
+	{
+		print("SQLiteLang (SQLiteLang_IsLanguageStringValid): Usage failed (system not started).");
+		return 0;
+	}		
+	
+	if(SQLiteLang_IsValidIdentifier(identifier))
+	{
+		if(SQLiteLang_IsValidLanguage(lang))
+		{
+			SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
+			
+			new DBStatement: retrieveStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "SELECT `string` FROM `strings` WHERE `identifier` = ? AND `lang` = ?");
+			stmt_bind_value(retrieveStringStatement, 0, DB::TYPE_STRING, identifier);
+			stmt_bind_value(retrieveStringStatement, 1, DB::TYPE_STRING, lang);
+	
+			if(stmt_execute(retrieveStringStatement))
+			{
+				if(stmt_rows_left(retrieveStringStatement))
+				{
+					stmt_close(retrieveStringStatement);
+				
+					if(SQLiteLang_internalVariables[debugStatus])
+						printf("SQLiteLang_DEBUG (SQLiteLang_IsLanguageStringValid): The language string \"%s (%s)\" exists in the database.", identifier, lang);
+					
+					db_close(SQLiteLang_internalVariables[databaseHandler]);
+					return 1;
+				}
+				else
+				{
+					stmt_close(retrieveStringStatement);
+				
+					if(SQLiteLang_internalVariables[debugStatus])
+						printf("SQLiteLang_DEBUG (SQLiteLang_IsLanguageStringValid): The language string \"%s (%s)\" does not exist in the database.", identifier, lang);
+					
+					db_close(SQLiteLang_internalVariables[databaseHandler]);
+					return 0;
+				}
+			}
 		}
 	}
 	

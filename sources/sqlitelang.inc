@@ -16,7 +16,7 @@
 /*
  * Available functions:
  *
- * (DONE!) SQLiteLang_Initialize(file[])
+ * (DONE!) SQLiteLang_Initialize(file[], bool:init_debug)
  * (DONE!) SQLiteLang_Terminate()
  *
  * (DONE!) SQLiteLang_AddIdentifier(identifier[], description[])
@@ -78,14 +78,6 @@ new SQLiteLang_internalVariables[SQLiteLang_internalInformation];
 // OnGameModeInit
 public OnGameModeInit()
 {
-    #if defined SQLiteLang_OnGameModeInit
-		SQLiteLang_OnGameModeInit();			
-    #endif
-    return 1;
-}
-
-public SQLiteLang_OnGameModeInit() 
-{
 	// By default, SQLiteLang is turned off.
 	SQLiteLang_internalVariables[systemStatus] = false;
 	
@@ -93,8 +85,12 @@ public SQLiteLang_OnGameModeInit()
 	SQLiteLang_internalVariables[debugStatus] = false;	
 	
 	// By default, the directory is set as the following.
-	strcat(SQLiteLang_internalVariables[databaseDirectory], "SQLiteLang/Database.db");
-	return 1;
+	strcat(SQLiteLang_internalVariables[databaseDirectory], "SQLiteLang/Database/Database.db");
+
+    #if defined SQLiteLang_OnGameModeInit
+		SQLiteLang_OnGameModeInit();			
+    #endif
+    return 1;
 }
 
 #if defined _ALS_OnGameModeInit
@@ -110,20 +106,16 @@ public SQLiteLang_OnGameModeInit()
 // OnPlayerConnect
 public OnPlayerConnect(playerid)
 {
+	// Default language set to the player.
+	strcat(SQLiteLang_playerVariables[playerid][playerLang], SQLiteLang_internalVariables[defaultLanguage]);
+	
+	SendClientMessage(playerid, 000000, "{A4B2B3}[SQLiteLang] {FFFFFF}This server uses \"SQLiteLang\". Use /sqlitelang to select an available language.");
+	
     #if defined SQLiteLang_OnPlayerConnect	
 		if(SQLiteLang_internalVariables[systemStatus])
 			SQLiteLang_OnPlayerConnect(playerid);			
     #endif
     return 1;
-}
-
-public SQLiteLang_OnPlayerConnect(playerid) 
-{
-	// Default language set to the player.
-	strcat(SQLiteLang_playerVariables[playerid][playerLang], SQLiteLang_internalVariables[defaultLanguage]);
-	
-	SendClientMessage(playerid, 000000, "{A4B2B3}[SQLiteLang] {FFFFFF}This server uses \"SQLiteLang\". Use /sqlitelang to select an available language.");
-	return 1;
 }
 
 #if defined _ALS_OnPlayerConnect
@@ -145,10 +137,10 @@ public SQLiteLang_OnPlayerConnect(playerid)
  * This function declares the name of the database and saves it into a variable (both file and directory).
  * If the database does not exist, a new one will be created by default in the folder 'SQLiteLang'.
  *
- * optional: file[] ("SQLiteLang/Database.db") = Directory and file name of the database.
- * optional: debug (false) = Turning this on will activate the debugging mode.
+ * optional: file[] ("SQLiteLang/Database/Database.db") = Directory and file name of the database.
+ * optional: bool:init_debug (false) = Turning this on will activate the debugging mode.
 */
-SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
+SQLiteLang_Initialize(file[] = "SQLiteLang/Database/Database.db", bool:init_debug = false)
 {
 	if(SQLiteLang_internalVariables[systemStatus]) 
 	{
@@ -164,7 +156,7 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 	strcat(SQLiteLang_internalVariables[databaseDirectory], file, 512);	
 	
 	// Checking if a custom directory has been selected.
-	if(strcmp(file, "SQLiteLang/Database.db", false)) 
+	if(strcmp(file, "SQLiteLang/Database/Database.db", false)) 
 	{	
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_Initialize): SQLiteLang initialization started. Custom directory selected: \"%s\".", SQLiteLang_internalVariables[databaseDirectory]);		
@@ -172,7 +164,7 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 	else
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
-			print("SQLiteLang_DEBUG (SQLiteLang_Initialize): SQLiteLang initialization started. Default directory selected: \"SQLiteLang/Database.db\".");		
+			print("SQLiteLang_DEBUG (SQLiteLang_Initialize): SQLiteLang initialization started. Default directory selected: \"SQLiteLang/Database/Database.db\".");		
 	}	
 		
 	// Checking if the database exists.
@@ -243,7 +235,7 @@ SQLiteLang_Terminate()
 	SQLiteLang_internalVariables[systemStatus] = false;
 	
 	// Clearing the internal variable that contains the database directory.
-	strcat(SQLiteLang_internalVariables[databaseDirectory], "SQLiteLang/Database.db");
+	strcat(SQLiteLang_internalVariables[databaseDirectory], "SQLiteLang/Database/Database.db");
 	
 	print("SQLiteLang (SQLiteLang_Terminate): Termination completed successfully.");
 	return 1;
@@ -313,50 +305,38 @@ SQLiteLang_AddString(identifier[], lang[], string[])
 		return 0;
 	}
 
-	// Checking if the identifier exists.
-	if(SQLiteLang_IsIdentifierValid(identifier)) 
+	if(!SQLiteLang_IsStringValid(identifier, lang))
 	{
-		// Checking if the language exists.
-		if(SQLiteLang_IsLanguageValid(lang))
+		// Opening a connection to the database.
+		SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);	
+				
+		// Preparing the query to add a new string in the database.
+		new DBStatement: insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `text`) VALUES (?, ?, ?)");
+		stmt_bind_value(insertStringStatement, 0, DB::TYPE_STRING, identifier);
+		stmt_bind_value(insertStringStatement, 1, DB::TYPE_STRING, lang);
+		stmt_bind_value(insertStringStatement, 2, DB::TYPE_STRING, string);
+				
+		// If the query has failed it means that the database is corrupted.
+		if(!stmt_execute(insertStringStatement)) 
 		{
-			// Opening a connection to the database.
-			SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);	
-			
-			// Preparing the query to add a new string in the database.
-			new DBStatement: insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `string`) VALUES (?, ?, ?)");
-			stmt_bind_value(insertStringStatement, 0, DB::TYPE_STRING, identifier);
-			stmt_bind_value(insertStringStatement, 1, DB::TYPE_STRING, lang);
-			stmt_bind_value(insertStringStatement, 2, DB::TYPE_STRING, string);
-			
-			// If the query has failed it means that the database is corrupted.
-			if(!stmt_execute(insertStringStatement)) 
-			{
-				print("SQLiteLang (SQLiteLang_AddString): Failed to executive SQLite query (database corrupted).");
-				return 0;
-			}
-					
-			printf("SQLiteLang (SQLiteLang_AddString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
-			
-			// Closing the statement.
-			stmt_close(insertStringStatement);
-			
-			// Closing the database as we don't need it anymore.
-			db_close(SQLiteLang_internalVariables[databaseHandler]);
-			return 1;
-		}
-		else
-		{
-			printf("SQLiteLang (SQLiteLang_AddString): The language \"%s\" does not exist in the database. You must create it before adding new strings.", lang);
+			print("SQLiteLang (SQLiteLang_AddString): Failed to executive SQLite query (database corrupted).");
 			return 0;
 		}
+						
+		printf("SQLiteLang (SQLiteLang_AddString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
+				
+		// Closing the statement.
+		stmt_close(insertStringStatement);
+				
+		// Closing the database as we don't need it anymore.
+		db_close(SQLiteLang_internalVariables[databaseHandler]);
+		return 1;
 	}
 	else 
 	{
-		printf("SQLiteLang (SQLiteLang_AddString): The identifier \"%s\" does not exist in the database. You must create it before adding new strings.", identifier);
+		printf("SQLiteLang (SQLiteLang_AddString): The string \"%s (%s)\" already exists. You may only modify or delete it.", identifier, lang);
 		return 0;
 	}
-	
-	return 1;
 }
 
 /*
@@ -798,7 +778,7 @@ SQLiteLang_IsLanguageValid(lang[])
 		}
 		else
 		{
-			stmt_close(retrieveIdentifierStatement);
+			stmt_close(retrieveLanguageStatement);
 			
 			if(SQLiteLang_internalVariables[debugStatus])
 				printf("SQLiteLang_DEBUG (SQLiteLang_IsLanguageValid): The language \"%s\" does not exist in the database.", lang);
@@ -826,9 +806,9 @@ SQLiteLang_IsStringValid(identifier[], lang[])
 		return 0;
 	}		
 	
-	if(SQLiteLang_IsValidIdentifier(identifier))
+	if(SQLiteLang_IsIdentifierValid(identifier))
 	{
-		if(SQLiteLang_IsValidLanguage(lang))
+		if(SQLiteLang_IsLanguageValid(lang))
 		{
 			SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 			

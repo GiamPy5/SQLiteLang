@@ -53,6 +53,14 @@
 #include 		<sqlitei>
 
 /*
+ * Macros
+*/
+
+#if !defined isnull
+	#define isnull(%1) \
+		((%1[0] == 0) || (%1[0] == 1 && %1[1] == 0))
+
+/*
  * Variables Declaration
 */
 
@@ -266,12 +274,12 @@ SQLiteLang_AddIdentifier(identifier[], description[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to add the new identifier.
-	new DBStatement: insertIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `identifiers` (`identifier_name`, `identifier_description`) VALUES (?, ?)");
-	stmt_bind_value(insertIdentifierStatement, 0, DB::TYPE_STRING, identifier);
-	stmt_bind_value(insertIdentifierStatement, 1, DB::TYPE_STRING, description);
+	new DBStatement: _insertIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `identifiers` (`identifier_name`, `identifier_description`) VALUES (?, ?)");
+	stmt_bind_value(_insertIdentifierStatement, 0, DB::TYPE_STRING, identifier);
+	stmt_bind_value(_insertIdentifierStatement, 1, DB::TYPE_STRING, description);
 		
 	// If the query has failed it means that the database is corrupted.
-	if(!stmt_execute(insertIdentifierStatement)) 
+	if(!stmt_execute(_insertIdentifierStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			print("SQLiteLang_DEBUG (SQLiteLang_AddIdentifier): Failed to add a new identifier (database corrupted).");
@@ -281,7 +289,7 @@ SQLiteLang_AddIdentifier(identifier[], description[])
 	printf("SQLiteLang (SQLiteLang_AddIdentifier): New identifier added (identifier: '%s' - description: '%s').", identifier, description);
 	
 	// Closing the statement.
-	stmt_close(insertIdentifierStatement);
+	stmt_close(_insertIdentifierStatement);
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);
@@ -329,13 +337,13 @@ SQLiteLang_AddString(identifier[], lang[], string[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);	
 				
 	// Preparing the query to add a new string in the database.
-	new DBStatement: insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `text`) VALUES (?, ?, ?)");
-	stmt_bind_value(insertStringStatement, 0, DB::TYPE_STRING, identifier);
-	stmt_bind_value(insertStringStatement, 1, DB::TYPE_STRING, lang);
-	stmt_bind_value(insertStringStatement, 2, DB::TYPE_STRING, string);
+	new DBStatement: _insertStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `strings` (`identifier`, `lang`, `text`) VALUES (?, ?, ?)");
+	stmt_bind_value(_insertStringStatement, 0, DB::TYPE_STRING, identifier);
+	stmt_bind_value(_insertStringStatement, 1, DB::TYPE_STRING, lang);
+	stmt_bind_value(_insertStringStatement, 2, DB::TYPE_STRING, string);
 				
 	// If the query has failed it means that the database is corrupted.
-	if(!stmt_execute(insertStringStatement)) 
+	if(!stmt_execute(_insertStringStatement)) 
 	{
 		print("SQLiteLang (SQLiteLang_AddString): Failed to executive SQLite query (database corrupted).");
 		return 0;
@@ -344,7 +352,7 @@ SQLiteLang_AddString(identifier[], lang[], string[])
 	printf("SQLiteLang (SQLiteLang_AddString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
 				
 	// Closing the statement.
-	stmt_close(insertStringStatement);
+	stmt_close(_insertStringStatement);
 				
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);
@@ -377,12 +385,12 @@ SQLiteLang_AddLanguage(lang[], description[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to insert the new language in the database.
-	new DBStatement: insertLanguageStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `languages` (`lang_name`, `lang_description`) VALUES (?, ?)");
-	stmt_bind_value(insertLanguageStatement, 0, DB::TYPE_STRING, lang);
-	stmt_bind_value(insertLanguageStatement, 1, DB::TYPE_STRING, description);
+	new DBStatement: _insertLanguageStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "INSERT INTO `languages` (`lang_name`, `lang_description`) VALUES (?, ?)");
+	stmt_bind_value(_insertLanguageStatement, 0, DB::TYPE_STRING, lang);
+	stmt_bind_value(_insertLanguageStatement, 1, DB::TYPE_STRING, description);
 	
 	// If the query fails to execute it means that the database is corrupted.
-	if(!stmt_execute(insertLanguageStatement)) 
+	if(!stmt_execute(_insertLanguageStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			print("SQLiteLang_DEBUG (SQLiteLang_AddLanguage): Failed to add a new language (database corrupted).");
@@ -392,7 +400,7 @@ SQLiteLang_AddLanguage(lang[], description[])
 	printf("SQLiteLang (SQLiteLang_AddLanguage): New language added (lang: '%s' - description: '%s').", lang, description);
 		
 	// Closing the statement.
-	stmt_close(insertLanguageStatement);	
+	stmt_close(_insertLanguageStatement);	
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);	
@@ -427,11 +435,11 @@ SQLiteLang_DeleteLanguage(lang[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to delete the language from the 'languages' table.
-	new DBStatement: deleteLanguageStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `languages` WHERE `lang_name` = ?");
-	stmt_bind_value(deleteLanguageStatement, 0, DB::TYPE_STRING, lang);
+	new DBStatement: _deleteLanguageStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `languages` WHERE `lang_name` = ?");
+	stmt_bind_value(_deleteLanguageStatement, 0, DB::TYPE_STRING, lang);
 	
 	// If the query has failed to execute it means that the database is corrupted.
-	if(!stmt_execute(deleteLanguageStatement)) 
+	if(!stmt_execute(_deleteLanguageStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteLanguage): Failed to delete the language \"%s\" (database corrupted).", lang);
@@ -443,14 +451,14 @@ SQLiteLang_DeleteLanguage(lang[])
 			
 	printf("SQLiteLang (SQLiteLang_DeleteLanguage): Language deleted (lang: '%s').", lang);
 			
-	stmt_close(deleteLanguageStatement);
+	stmt_close(_deleteLanguageStatement);
 	
 	// Here we are not closing the database as we need to make another query immediatly after that.
 	
-	new DBStatement: deleteLanguageStringsStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `lang` = ?");
-	stmt_bind_value(deleteLanguageStringsStatement, 0, DB::TYPE_STRING, lang);
+	new DBStatement: _deleteLanguageStringsStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `lang` = ?");
+	stmt_bind_value(_deleteLanguageStringsStatement, 0, DB::TYPE_STRING, lang);
 	
-	if(!stmt_execute(deleteLanguageStringsStatement)) 
+	if(!stmt_execute(_deleteLanguageStringsStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteLanguage): Failed to delete the language strings \"%s\" (database corrupted).", lang);
@@ -460,7 +468,7 @@ SQLiteLang_DeleteLanguage(lang[])
 		return 0;
 	}	
 	
-	stmt_close(deleteLanguageStringsStatement);
+	stmt_close(_deleteLanguageStringsStatement);
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);	
@@ -493,11 +501,11 @@ SQLiteLang_DeleteIdentifier(identifier[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to delete the identifier from the 'identifiers' table.
-	new DBStatement: deleteIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `identifiers` WHERE `identifier_name` = ?");
-	stmt_bind_value(deleteIdentifierStatement, 0, DB::TYPE_STRING, identifier);
+	new DBStatement: _deleteIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `identifiers` WHERE `identifier_name` = ?");
+	stmt_bind_value(_deleteIdentifierStatement, 0, DB::TYPE_STRING, identifier);
 	
 	// If the query has failed to execute it means that the database is corrupted.
-	if(!stmt_execute(deleteIdentifierStatement)) 
+	if(!stmt_execute(_deleteIdentifierStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteIdentifier): Failed to delete the identifier \"%s\" (database corrupted).", identifier);
@@ -509,12 +517,12 @@ SQLiteLang_DeleteIdentifier(identifier[])
 			
 	printf("SQLiteLang (SQLiteLang_DeleteIdentifier): Identifier deleted (identifier: '%s').", identifier);
 			
-	stmt_close(deleteIdentifierStatement);
+	stmt_close(_deleteIdentifierStatement);
 	
 	// Here we are not closing the database as we need to make another query immediatly after that.
 	
-	new DBStatement: deleteLanguageStringsStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `identifier` = ?");
-	stmt_bind_value(deleteLanguageStringsStatement, 0, DB::TYPE_STRING, identifier);
+	new DBStatement: _deleteLanguageStringsStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `identifier` = ?");
+	stmt_bind_value(_deleteLanguageStringsStatement, 0, DB::TYPE_STRING, identifier);
 	
 	if(!stmt_execute(deleteLanguageStringsStatement)) 
 	{
@@ -526,7 +534,7 @@ SQLiteLang_DeleteIdentifier(identifier[])
 		return 0;
 	}	
 	
-	stmt_close(deleteLanguageStringsStatement);
+	stmt_close(_deleteLanguageStringsStatement);
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);					
@@ -548,11 +556,24 @@ SQLiteLang_DeleteString(identifier[], lang[])
 		return 0;
 	}
 		
+	// If the identifier does not exist.
+	if(!SQLiteLang_IsIdentifierValid(identifier)) 
+	{
+		printf("SQLiteLang (SQLiteLang_DeleteString): The identifier \"%s\" does not exist.", identifier);
+		return 0;
+	}
+	
+	// If the language does not exist.
+	if(!SQLiteLang_IsLanguageValid(lang)) 
+	{
+		printf("SQLiteLang (SQLiteLang_DeleteString): The language \"%s\" does not exist.", lang);
+		return 0;
+	}		
+		
 	// If the string does not exist then we interrupt the execution of the code.
 	if(!SQLiteLang_IsStringValid(identifier, lang)) 
 	{
-		if(SQLiteLang_internalVariables[debugStatus])
-			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
+		printf("SQLiteLang (SQLiteLang_DeleteString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
 		return 0;
 	}
 	
@@ -560,12 +581,12 @@ SQLiteLang_DeleteString(identifier[], lang[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to delete the identifier from the 'identifiers' table.
-	new DBStatement: deleteStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `identifier` = ? AND `lang` = ?");
-	stmt_bind_value(deleteStringStatement, 0, DB::TYPE_STRING, identifier);
-	stmt_bind_value(deleteStringStatement, 1, DB::TYPE_STRING, lang);
+	new DBStatement: _deleteStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "DELETE FROM `strings` WHERE `identifier` = ? AND `lang` = ?");
+	stmt_bind_value(_deleteStringStatement, 0, DB::TYPE_STRING, identifier);
+	stmt_bind_value(_deleteStringStatement, 1, DB::TYPE_STRING, lang);
 	
 	// If the query has failed to execute it means that the database is corrupted.
-	if(!stmt_execute(deleteStringStatement)) 
+	if(!stmt_execute(_deleteStringStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteString): Failed to delete the string \"%s (%s)\" (database corrupted).", identifier, lang);
@@ -577,7 +598,7 @@ SQLiteLang_DeleteString(identifier[], lang[])
 			
 	printf("SQLiteLang (SQLiteLang_DeleteString): String deleted (identifier: '%s' - lang: '%s').", identifier, lang);
 			
-	stmt_close(deleteStringStatement);
+	stmt_close(_deleteStringStatement);
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);
@@ -600,11 +621,24 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
 		return 0;
 	}
 	
+	// If the identifier does not exist.
+	if(!SQLiteLang_IsIdentifierValid(identifier)) 
+	{
+		printf("SQLiteLang (SQLiteLang_ModifyString): The identifier \"%s\" does not exist.", identifier);
+		return 0;
+	}
+	
+	// If the language does not exist.
+	if(!SQLiteLang_IsLanguageValid(lang)) 
+	{
+		printf("SQLiteLang (SQLiteLang_ModifyString): The language \"%s\" does not exist.", lang);
+		return 0;
+	}		
+	
 	// If the string does not exist then we interrupt the execution of the code.
 	if(!SQLiteLang_IsStringValid(identifier, lang)) 
 	{
-		if(SQLiteLang_internalVariables[debugStatus])
-			printf("SQLiteLang_DEBUG (SQLiteLang_ModifyString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
+		printf("SQLiteLang (SQLiteLang_ModifyString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
 		return 0;
 	}
 	
@@ -612,13 +646,13 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
 	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 	
 	// Preparing the query to delete the identifier from the 'identifiers' table.
-	new DBStatement: modifyStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `strings` SET `text` = ? WHERE `identifier` = ? AND `lang` = ?");
-	stmt_bind_value(modifyStringStatement, 0, DB::TYPE_STRING, new_string);
-	stmt_bind_value(modifyStringStatement, 1, DB::TYPE_STRING, identifier);
-	stmt_bind_value(modifyStringStatement, 2, DB::TYPE_STRING, lang);
+	new DBStatement: _modifyStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `strings` SET `text` = ? WHERE `identifier` = ? AND `lang` = ?");
+	stmt_bind_value(_modifyStringStatement, 0, DB::TYPE_STRING, new_string);
+	stmt_bind_value(_modifyStringStatement, 1, DB::TYPE_STRING, identifier);
+	stmt_bind_value(_modifyStringStatement, 2, DB::TYPE_STRING, lang);
 	
 	// If the query has failed to execute it means that the database is corrupted.
-	if(!stmt_execute(modifyStringStatement)) 
+	if(!stmt_execute(_modifyStringStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
 			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteString): Failed to modify the string \"%s (%s)\" (database corrupted).", identifier, lang);
@@ -630,7 +664,7 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
 			
 	printf("SQLiteLang (SQLiteLang_DeleteString): String modified (identifier: '%s' - lang: '%s' - text: '%s').", identifier, lang, new_string);
 			
-	stmt_close(modifyStringStatement);
+	stmt_close(_modifyStringStatement);
 	
 	// Closing the database as we don't need it anymore.
 	db_close(SQLiteLang_internalVariables[databaseHandler]);	
@@ -646,15 +680,65 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
 */
 SQLiteLang_ShowLanguageString(identifier[], lang[] = "")
 {
-	if(isnull(lang)) strcat(lang, SQLiteLang_internalVariables[defaultLanguage]);
+	if(isnull(lang)) strcat(lang, SQLiteLang_internalVariables[defaultLanguage], 128);
 	
-	if(!SQLiteLang_internalVariables[systemStatus]) 
+	if(!SQLiteLang_internalVariables[systemStatus])
 	{
 		print("SQLiteLang (SQLiteLang_ShowLanguageString): Usage failed (system not started).");
-		return 0;
-	}
 		
-	return 1;
+		new _error[64] = "SYSTEM_NOT_STARTED";
+		return _error;
+	}
+	
+	// If the identifier does not exist.
+	if(!SQLiteLang_IsIdentifierValid(identifier)) 
+	{
+		printf("SQLiteLang (SQLiteLang_ShowLanguageString): The identifier \"%s\" does not exist.", identifier);
+		
+		new _error[64] = "IDENTIFIER_INVALID";
+		return _error;
+	}
+	
+	// If the language does not exist.
+	if(!SQLiteLang_IsLanguageValid(lang)) 
+	{
+		printf("SQLiteLang (SQLiteLang_ShowLanguageString): The language \"%s\" does not exist.", lang);
+		
+		new _error[64] = "LANGUAGE_INVALID";
+		return _error;
+	}		
+	
+	// If the string does not exist then we interrupt the execution of the code.
+	if(!SQLiteLang_IsStringValid(identifier, lang)) 
+	{
+		printf("SQLiteLang (SQLiteLang_ShowLanguageString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
+		
+		new _error[64] = "STRING_INVALID";
+		return _error;
+	}
+
+	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
+	
+	new _queryInput[512];
+	format(_queryInput, sizeof(_queryInput), "SELECT `text` FROM `strings` WHERE `identifier` = '%s' AND `lang` = '%s'", identifier, lang);
+	new DBResult: _queryResult = db_query(SQLiteLang_internalVariables[databaseHandler], _queryInput);
+	
+	if(db_num_rows(_queryResult))
+	{
+		new _queryOutput[128];
+		
+		db_get_field(_queryResult, 0, _queryOutput, sizeof(_queryOutput));
+		
+		printf("SQLiteLang (SQLiteLang_ShowLanguageString): We've found: \"%s\".", _queryOutput);		
+		return _queryOutput;
+	}
+	else
+	{
+		printf("SQLiteLang (SQLiteLang_ShowLanguageString): Something went wrong in the query execution.", identifier, lang);
+		
+		new _error[64] = "NOT_DEFINED_ERROR";
+		return _error;
+	}
 }
 
 /*

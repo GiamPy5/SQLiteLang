@@ -23,12 +23,12 @@
  * TODO: SQLiteLang_DeleteIdentifier(identifier[])
  * TODO: SQLiteLang_ModifyIdentifierDescription(identifier[], new_desc[])
  *
- * TODO: SQLiteLang_AddString(identifier[], lang[], string[])
+ * (DONE!) SQLiteLang_AddString(identifier[], lang[], string[])
  * TODO: SQLiteLang_DeleteString(identifier[], lang[])
  * TODO: SQLiteLang_ModifyString(identifier[], lang[], new_string[])
  *
- * TODO: SQLiteLang_AddLanguage(lang[], description[])
- * TODO: SQLiteLang_DeleteLanguage(lang[])
+ * (DONE!) SQLiteLang_AddLanguage(lang[], description[])
+ * (DONE!) SQLiteLang_DeleteLanguage(lang[])
  * TODO: SQLiteLang_ModifyLanguage(old_lang[], new_lang[])
  * TODO: SQLiteLang_ModifyLanguageDescription(lang[], new_desc[])
  *
@@ -56,13 +56,14 @@
 */
 
 enum SQLiteLang_playerInformation {
-	playerLang = 0,
+	playerLang[128],
 };
 
 enum SQLiteLang_internalInformation {
 	bool: systemStatus,
 	bool: debugStatus,
 	DB: databaseHandler,
+	defaultLanguage[128],
 	databaseDirectory[128],		
 };
 
@@ -117,6 +118,9 @@ public OnPlayerConnect(playerid)
 
 public SQLiteLang_OnPlayerConnect(playerid) 
 {
+	// Default language set to the player.
+	strcat(SQLiteLang_playerVariables[playerid][playerLang], SQLiteLang_internalVariables[defaultLanguage]);
+	
 	SendClientMessage(playerid, 000000, "{A4B2B3}[SQLiteLang] {FFFFFF}This server uses \"SQLiteLang\". Use /sqlitelang to select an available language.");
 	return 1;
 }

@@ -146,7 +146,7 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 {
 	if(SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: Inizialization failed (system already started).");
+		print("SQLiteLang (SQLiteLang_Initialize): Inizialization failed (system already started).");
 		return 0;
 	}
 		
@@ -158,25 +158,25 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 	if(strcmp(file, "SQLiteLang/Database.db", false)) 
 	{	
 		if(SQLiteLang_internalVariables[debugStatus])
-			printf("SQLiteLang_DEBUG: SQLiteLang initialization started. Custom directory selected: \"%s\".", SQLiteLang_internalVariables[databaseDirectory]);		
+			printf("SQLiteLang_DEBUG (SQLiteLang_Initialize): SQLiteLang initialization started. Custom directory selected: \"%s\".", SQLiteLang_internalVariables[databaseDirectory]);		
 	}
 	else
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
-			print("SQLiteLang_DEBUG: SQLiteLang initialization started. Default directory selected: \"SQLiteLang/Database.db\".");		
+			print("SQLiteLang_DEBUG (SQLiteLang_Initialize): SQLiteLang initialization started. Default directory selected: \"SQLiteLang/Database.db\".");		
 	}	
 		
 	if(!fexist(SQLiteLang_internalVariables[databaseDirectory])) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
-			print("SQLiteLang_DEBUG: The database does not exist, automatic creation has been started.");
+			print("SQLiteLang_DEBUG (SQLiteLang_Initialize): The database does not exist, automatic creation has been started.");
 		
 		SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
 		
 		if(!fexist(SQLiteLang_internalVariables[databaseDirectory]))
 		{	
 			if(SQLiteLang_internalVariables[debugStatus])
-				print("SQLiteLang_DEBUG: The system failed to create the database (the folder 'SQLiteLang' does not exist).");
+				print("SQLiteLang_DEBUG (SQLiteLang_Initialize): The system failed to create the database (the folder 'SQLiteLang' does not exist).");
 			return 0;
 		}
 		else
@@ -192,7 +192,7 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "CREATE TABLE IF NOT EXISTS `languages` (`internal_identifier` INTEGER PRIMARY KEY NOT NULL UNIQUE)");
 			db_exec(SQLiteLang_internalVariables[databaseHandler], "ALTER TABLE `languages` ADD `lang_name` VARCHAR");
 			
-			print("SQLiteLang: Initialization completed successfully.");
+			print("SQLiteLang (SQLiteLang_Initialize): Initialization completed successfully.");
 			SQLiteLang_internalVariables[systemStatus] = true;
 			
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
@@ -200,7 +200,7 @@ SQLiteLang_Initialize(file[] = "SQLiteLang/Database.db", init_debug = false)
 	}
 	else
 	{
-		print("SQLiteLang: Initialization completed successfully.");
+		print("SQLiteLang (SQLiteLang_Initialize): Initialization completed successfully.");
 		SQLiteLang_internalVariables[systemStatus] = true;
 	}
 	
@@ -215,13 +215,13 @@ SQLiteLang_Terminate()
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: Termination failed (system not started).");
+		print("SQLiteLang (SQLiteLang_Terminate): Termination failed (system not started).");
 		return 0;
 	} 
 		
 	SQLiteLang_internalVariables[systemStatus] = false;
 	
-	print("SQLiteLang: Termination completed successfully.");
+	print("SQLiteLang (SQLiteLang_Terminate): Termination completed successfully.");
 	return 1;
 }
 	
@@ -235,14 +235,14 @@ SQLiteLang_AddIdentifierString(identifier[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_AddString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_AddIdentifierString): Usage failed (system not started).");
 		return 0;
 	}
 	
 	if(SQLiteLang_IsIdentifierValid(identifier)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
-			printf("SQLiteLang_DEBUG: The identifier \"%s\" already exists in the database.", identifier);
+			printf("SQLiteLang_DEBUG (SQLiteLang_AddIdentifierString): The identifier \"%s\" already exists in the database.", identifier);
 		return 0;
 	}
 	
@@ -254,11 +254,11 @@ SQLiteLang_AddIdentifierString(identifier[])
 	if(!stmt_execute(insertIdentifierStatement)) 
 	{
 		if(SQLiteLang_internalVariables[debugStatus])
-			print("SQLiteLang_DEBUG: Failed to add a new identifier (database corrupted).");
+			print("SQLiteLang_DEBUG (SQLiteLang_AddIdentifierString): Failed to add a new identifier (database corrupted).");
 		return 0;
 	}
 			
-	printf("SQLiteLang: New identifier added (identifier: '%s').", identifier);
+	printf("SQLiteLang (SQLiteLang_AddIdentifierString): New identifier added (identifier: '%s').", identifier);
 			
 	stmt_close(insertIdentifierStatement);
 	return 1;
@@ -276,7 +276,7 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_AddString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_AddLanguageString): Usage failed (system not started).");
 		return 0;
 	}
 	
@@ -314,11 +314,11 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
 					
 					if(!stmt_execute(insertStringStatement)) 
 					{
-						print("SQLiteLang: Failed to executive SQLite query (database corrupted).");
+						print("SQLiteLang (SQLiteLang_AddLanguageString): Failed to executive SQLite query (database corrupted).");
 						return 0;
 					}
 					
-					printf("SQLiteLang: New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
+					printf("SQLiteLang (SQLiteLang_AddLanguageString): New string added (identifier: '%s' - lang: '%s' - string: '%s').", identifier, lang, string);
 					
 					stmt_close(insertStringStatement);
 					return 1;
@@ -327,14 +327,14 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
 				{
 					stmt_close(retrieveLanguageStatement);
 					
-					printf("SQLiteLang: The language \"%s\" does not exist in the database. You must create it before adding new strings.", lang);
+					printf("SQLiteLang (SQLiteLang_AddLanguageString): The language \"%s\" does not exist in the database. You must create it before adding new strings.", lang);
 					db_close(SQLiteLang_internalVariables[databaseHandler]);
 					return 0;
 				}
 			}
 			else 
 			{
-				print("SQLiteLang: Failure to execute the SQLite query (database corrupted).");
+				print("SQLiteLang (SQLiteLang_AddLanguageString): Failure to execute the SQLite query (database corrupted).");
 				db_close(SQLiteLang_internalVariables[databaseHandler]);
 				return 0;
 			}
@@ -343,7 +343,7 @@ SQLiteLang_AddLanguageString(identifier[], lang[], string[])
 		{
 			stmt_close(retrieveIdentifierStatement);
 			
-			printf("SQLiteLang: The identifier \"%s\" does not exist in the database. You must create it before adding new strings.", identifier);
+			printf("SQLiteLang (SQLiteLang_AddLanguageString): The identifier \"%s\" does not exist in the database. You must create it before adding new strings.", identifier);
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 0;
 		}
@@ -362,7 +362,7 @@ SQLiteLang_AddLanguage(lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_AddLanguage may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_AddLanguage): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -381,7 +381,7 @@ SQLiteLang_DeleteLanguage(lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_DeleteLanguage may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_DeleteLanguage): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -398,7 +398,7 @@ SQLiteLang_DeleteIdentifier(identifier[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_DeleteIdentifier may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_DeleteIdentifier): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -416,7 +416,7 @@ SQLiteLang_DeleteLanguageString(identifier[], lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_DeleteLanguageString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_DeleteLanguageString): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -435,7 +435,7 @@ SQLiteLang_ModifyLanguageString(identifier[], lang[], new_string[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_ModifyLanguageString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_ModifyLanguageString): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -453,7 +453,7 @@ SQLiteLang_ShowLanguageString(identifier[], lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_ShowLanguageString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_ShowLanguageString): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -471,7 +471,7 @@ SQLiteLang_ShowPlayerString(playerid, identifier[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_ShowPlayerString may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_ShowPlayerString): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -489,7 +489,7 @@ SQLiteLang_SetDefaultLang(lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_SetDefaultLang may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_SetDefaultLang): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -507,7 +507,7 @@ SQLiteLang_SetPlayerLang(playerid, lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_SetPlayerLang may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_SetPlayerLang): Usage failed (system not started).");
 		return 0;
 	}
 		
@@ -524,7 +524,7 @@ SQLiteLang_IsIdentifierValid(identifier[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_IsIdentifierValid may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_IsIdentifierValid): Usage failed (system not started).");
 		return 0;
 	}
 	
@@ -540,7 +540,7 @@ SQLiteLang_IsIdentifierValid(identifier[])
 			stmt_close(retrieveIdentifierStatement);
 			
 			if(SQLiteLang_internalVariables[debugStatus])
-				printf("SQLiteLang_DEBUG: The identifier \"%s\" exists in the database.", identifier);
+				printf("SQLiteLang_DEBUG (SQLiteLang_IsIdentifierValid): The identifier \"%s\" exists in the database.", identifier);
 				
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 1;
@@ -550,7 +550,7 @@ SQLiteLang_IsIdentifierValid(identifier[])
 			stmt_close(retrieveIdentifierStatement);
 			
 			if(SQLiteLang_internalVariables[debugStatus])
-				printf("SQLiteLang_DEBUG: The identifier \"%s\" does not exist in the database.", identifier);
+				printf("SQLiteLang_DEBUG (SQLiteLang_IsIdentifierValid): The identifier \"%s\" does not exist in the database.", identifier);
 				
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 0;
@@ -570,7 +570,7 @@ SQLiteLang_IsLanguageValid(lang[])
 {
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
-		print("SQLiteLang: SQLiteLang_IsLanguageValid may not be used (system not started).");
+		print("SQLiteLang (SQLiteLang_IsLanguageValid): Usage failed (system not started).");
 		return 0;
 	}
 	
@@ -586,7 +586,7 @@ SQLiteLang_IsLanguageValid(lang[])
 			stmt_close(retrieveLanguageStatement);
 			
 			if(SQLiteLang_internalVariables[debugStatus])
-				printf("SQLiteLang_DEBUG: The language \"%s\" exists in the database.", lang);
+				printf("SQLiteLang_DEBUG (SQLiteLang_IsLanguageValid): The language \"%s\" exists in the database.", lang);
 				
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 1;
@@ -596,7 +596,7 @@ SQLiteLang_IsLanguageValid(lang[])
 			stmt_close(retrieveIdentifierStatement);
 			
 			if(SQLiteLang_internalVariables[debugStatus])
-				printf("SQLiteLang_DEBUG: The language \"%s\" does not exist in the database.", lang);
+				printf("SQLiteLang_DEBUG (SQLiteLang_IsLanguageValid): The language \"%s\" does not exist in the database.", lang);
 				
 			db_close(SQLiteLang_internalVariables[databaseHandler]);
 			return 0;

@@ -31,7 +31,7 @@
  *
  * (DONE!) SQLiteLang_AddString(identifier[], lang[], string[])
  * (DONE!) SQLiteLang_DeleteString(identifier[], lang[])
- * TODO: SQLiteLang_ModifyString(identifier[], lang[], new_string[])
+ * (DONE!) SQLiteLang_ModifyString(identifier[], lang[], new_string[])
  *
  * TODO: SQLiteLang_ShowLanguageString(identifier[], lang[])
  * TODO: SQLiteLang_ShowPlayerString(playerid, identifier[])
@@ -607,7 +607,41 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
 		print("SQLiteLang (SQLiteLang_ModifyString): Usage failed (system not started).");
 		return 0;
 	}
-		
+	
+	// If the string does not exist then we interrupt the execution of the code.
+	if(!SQLiteLang_IsStringValid(identifier, lang)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus])
+			printf("SQLiteLang_DEBUG (SQLiteLang_ModifyString): The string \"%s (%s)\" does not exist in the database.", identifier, lang);
+		return 0;
+	}
+	
+	// Opening the database.
+	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
+	
+	// Preparing the query to delete the identifier from the 'identifiers' table.
+	new DBStatement: modifyStringStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `strings` SET `text` = ? WHERE `identifier` = ? AND `lang` = ?");
+	stmt_bind_value(modifyStringStatement, 0, DB::TYPE_STRING, new_string);
+	stmt_bind_value(modifyStringStatement, 1, DB::TYPE_STRING, identifier);
+	stmt_bind_value(modifyStringStatement, 2, DB::TYPE_STRING, lang);
+	
+	// If the query has failed to execute it means that the database is corrupted.
+	if(!stmt_execute(modifyStringStatement)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus])
+			printf("SQLiteLang_DEBUG (SQLiteLang_DeleteString): Failed to modify the string \"%s (%s)\" (database corrupted).", identifier, lang);
+			
+		// Closing the database as we don't need it anymore.
+		db_close(SQLiteLang_internalVariables[databaseHandler]);			
+		return 0;
+	}
+			
+	printf("SQLiteLang (SQLiteLang_DeleteString): String modified (identifier: '%s' - lang: '%s' - text: '%s').", identifier, lang, new_string);
+			
+	stmt_close(modifyStringStatement);
+	
+	// Closing the database as we don't need it anymore.
+	db_close(SQLiteLang_internalVariables[databaseHandler]);	
 	return 1;
 }
 
@@ -616,10 +650,12 @@ SQLiteLang_ModifyString(identifier[], lang[], new_string[])
  * This function shows a specific language string taken from the database.
  * 
  * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
- * lang[] = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
+ * optional: lang[] (default language) = The lang is used to identify the language of the string (ie. "en" or "IT" or "spanish").
 */
-SQLiteLang_ShowLanguageString(identifier[], lang[])
+SQLiteLang_ShowLanguageString(identifier[], lang[] = "")
 {
+	if(isnull(lang)) strcat(lang, SQLiteLang_internalVariables[defaultLanguage]);
+	
 	if(!SQLiteLang_internalVariables[systemStatus]) 
 	{
 		print("SQLiteLang (SQLiteLang_ShowLanguageString): Usage failed (system not started).");

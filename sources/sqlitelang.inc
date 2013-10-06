@@ -124,8 +124,6 @@ public OnPlayerConnect(playerid)
 	
 	// Default language set to the player.
 	strcat(SQLiteLang_playerVariables[playerid][playerLang], SQLiteLang_internalVariables[defaultLanguage]);
-		
-	if(SQLiteLang_internalVariables[systemStatus]) SendClientMessage(playerid, 000000, "{A4B2B3}[SQLiteLang] {FFFFFF}This server uses \"SQLiteLang\". Use /sqlitelang to select an available language.");
     return 1;
 }
 

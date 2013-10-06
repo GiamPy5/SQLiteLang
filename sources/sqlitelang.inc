@@ -21,13 +21,13 @@
  *
  * (DONE!) SQLiteLang_AddIdentifier(identifier[], description[])
  * (DONE!) SQLiteLang_DeleteIdentifier(identifier[])
- * TODO: SQLiteLang_ModifyIdentifier(old_identifier[], new_identifier[])
- * TODO: SQLiteLang_ModifyIdentifierDescription(identifier[], new_desc[])
+ * (DONE!) SQLiteLang_ModifyIdentifier(old_identifier[], new_identifier[])
+ * (DONE!) SQLiteLang_ModifyIdentifierDesc(identifier[], new_desc[])
  *
  * (DONE!) SQLiteLang_AddLanguage(lang[], description[])
  * (DONE!) SQLiteLang_DeleteLanguage(lang[])
  * TODO: SQLiteLang_ModifyLanguage(old_lang[], new_lang[])
- * TODO: SQLiteLang_ModifyLanguageDescription(lang[], new_desc[])
+ * TODO: SQLiteLang_ModifyLanguageDesc(lang[], new_desc[])
  *
  * (DONE!) SQLiteLang_AddString(identifier[], lang[], string[])
  * (DONE!) SQLiteLang_DeleteString(identifier[], lang[])
@@ -59,6 +59,7 @@
 #if !defined isnull
 	#define isnull(%1) \
 		((%1[0] == 0) || (%1[0] == 1 && %1[1] == 0))
+#endif
 
 /*
  * Variables Declaration
@@ -469,6 +470,123 @@ stock SQLiteLang_DeleteLanguage(lang[])
 	return 1;
 }
 
+/*
+ * SQLiteLang_ModifyIdentifier
+ * This function modifies an identifier name to new one.
+ * 
+ * old_identifier[] = The identifier to be modified.
+ * new_identifier[] = The new name of the identifier.
+*/
+stock SQLiteLang_ModifyIdentifier(old_identifier[], new_identifier[])
+{
+	if(!SQLiteLang_internalVariables[systemStatus]) 
+	{
+		print("SQLiteLang (SQLiteLang_ModifyIdentifier): Usage failed (system not started).");
+		return 0;
+	}
+		
+	// If the identifier does not exist then we interrupt the execution of the code.
+	if(!SQLiteLang_IsIdentifierValid(old_identifier)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus]) printf("SQLiteLang_DEBUG (SQLiteLang_ModifyIdentifier): The identifier \"%s\" does not exist in the database.", old_identifier);
+		return 0;
+	}
+
+	// Opening the database.
+	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
+	
+	// Preparing the query to delete the identifier from the 'identifiers' table.
+	new DBStatement: _modifyIdentifierStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `identifiers` SET `identifier_name` = ? WHERE `identifier_name` = ?");
+	stmt_bind_value(_modifyIdentifierStatement, 0, DB::TYPE_STRING, new_identifier);
+	stmt_bind_value(_modifyIdentifierStatement, 1, DB::TYPE_STRING, old_identifier);
+	
+	// If the query has failed to execute it means that the database is corrupted.
+	if(!stmt_execute(_modifyIdentifierStatement)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus]) printf("SQLiteLang_DEBUG (SQLiteLang_ModifyIdentifier): Failed to modify the identifier from \"%s\" to \"%s\" (database corrupted).", old_identifier, new_identifier);
+			
+		// Closing the database as we don't need it anymore.
+		db_close(SQLiteLang_internalVariables[databaseHandler]);			
+		return 0;
+	}
+			
+	printf("SQLiteLang (SQLiteLang_ModifyIdentifier): Identifier modified (before: '%s' - now: '%s').", old_identifier, new_identifier);
+			
+	stmt_close(_modifyIdentifierStatement);
+	
+	// Preparing the query to delete the identifier from the 'identifiers' table.
+	new DBStatement: _modifyIdentifierStringsStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `strings` SET `identifier` = ? WHERE `identifier` = ?");
+	stmt_bind_value(_modifyIdentifierStringsStatement, 0, DB::TYPE_STRING, new_identifier);
+	stmt_bind_value(_modifyIdentifierStringsStatement, 1, DB::TYPE_STRING, old_identifier);	
+	
+	// If the query has failed to execute it means that the database is corrupted.
+	if(!stmt_execute(_modifyIdentifierStringsStatement)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus]) printf("SQLiteLang_DEBUG (SQLiteLang_ModifyIdentifier): Failed to modify the identifier strings from \"%s\" to \"%s\" (database corrupted).", old_identifier, new_identifier);
+			
+		// Closing the database as we don't need it anymore.
+		db_close(SQLiteLang_internalVariables[databaseHandler]);			
+		return 0;
+	}
+			
+	printf("SQLiteLang (SQLiteLang_ModifyIdentifier): Identifier strings modified (before: '%s' - now: '%s').", old_identifier, new_identifier);
+			
+	stmt_close(_modifyIdentifierStringsStatement);	
+	
+	// Closing the database as we don't need it anymore.
+	db_close(SQLiteLang_internalVariables[databaseHandler]);
+	return 1;
+}
+
+/*
+ * SQLiteLang_ModifyIdentifierDesc
+ * This function modifies an identifier's description to a new one.
+ * 
+ * identifier[] = The identifier is used to identify, as the parameter says, every string of text (ie. "welcome_string").
+ * new_desc[] = The new description of the identifier.
+*/
+stock SQLiteLang_ModifyIdentifierDesc(identifier[], new_desc[])
+{
+	if(!SQLiteLang_internalVariables[systemStatus]) 
+	{
+		print("SQLiteLang (SQLiteLang_ModifyIdentifierDesc): Usage failed (system not started).");
+		return 0;
+	}
+		
+	// If the identifier does not exist then we interrupt the execution of the code.
+	if(!SQLiteLang_IsIdentifierValid(identifier)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus]) printf("SQLiteLang_DEBUG (SQLiteLang_ModifyIdentifierDesc): The identifier \"%s\" does not exist in the database.", identifier);
+		return 0;
+	}
+
+	// Opening the database.
+	SQLiteLang_internalVariables[databaseHandler] = db_open(SQLiteLang_internalVariables[databaseDirectory]);
+	
+	// Preparing the query to delete the identifier from the 'identifiers' table.
+	new DBStatement: _modifyIdentifierDescriptionStatement = db_prepare(SQLiteLang_internalVariables[databaseHandler], "UPDATE `identifiers` SET `identifier_description` = ? WHERE `identifier_name` = ?");
+	stmt_bind_value(_modifyIdentifierDescriptionStatement, 0, DB::TYPE_STRING, new_desc);
+	stmt_bind_value(_modifyIdentifierDescriptionStatement, 1, DB::TYPE_STRING, identifier);
+	
+	// If the query has failed to execute it means that the database is corrupted.
+	if(!stmt_execute(_modifyIdentifierDescriptionStatement)) 
+	{
+		if(SQLiteLang_internalVariables[debugStatus]) printf("SQLiteLang_DEBUG (SQLiteLang_ModifyIdentifierDesc): Failed to modify the identifier (%s) description to \"%s\" (database corrupted).", identifier, new_desc);
+			
+		// Closing the database as we don't need it anymore.
+		db_close(SQLiteLang_internalVariables[databaseHandler]);			
+		return 0;
+	}
+			
+	printf("SQLiteLang (SQLiteLang_ModifyIdentifierDesc): Identifier description modified (identifier: '%s' - new description: '%s').", identifier, new_desc);
+			
+	stmt_close(_modifyIdentifierDescriptionStatement);
+	
+	// Closing the database as we don't need it anymore.
+	db_close(SQLiteLang_internalVariables[databaseHandler]);
+	return 1;
+}
+	
 /*
  * SQLiteLang_DeleteIdentifier
  * This function deletes all the language strings of a specific identifier from the database.
